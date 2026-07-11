@@ -1,0 +1,16 @@
+# Secrets -- never commit, never share
+.env
+session.json
+
+# Bot state
+seen.json
+
+# Image cache (regenerated per message)
+img_cache/
+
+# Editor / OS cruft
+*.pyc
+__pycache__/
+.DS_Store
+*.swp
+*~

@@ -1,0 +1,33 @@
+[Unit]
+Description=@mv.lls Instagram AI DM bot (ollama-backed)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=myths
+Group=myths
+WorkingDirectory=/home/myths/instagrambot
+
+# Load credentials from .env. systemd reads KEY=VALUE without quotes.
+EnvironmentFile=/home/myths/instagrambot/.env
+
+ExecStart=/home/myths/botenv/bin/python -u /home/myths/instagrambot/bot.py
+
+# IMPORTANT: Restart=no. We deliberately do NOT auto-restart, because
+# a restart loop hammering instagrapi is exactly what got @quid.x flagged.
+# If the bot dies, restart it by hand AFTER solving any challenge on your phone.
+Restart=no
+
+# Give the bot time to finish a current poll cycle before SIGKILL on stop.
+TimeoutStopSec=30
+KillMode=mixed
+
+# Logging goes to journald. View with:
+#   journalctl -u instagrambot -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=instagrambot
+
+[Install]
+WantedBy=multi-user.target
