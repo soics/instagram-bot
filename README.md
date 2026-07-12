@@ -1,6 +1,5 @@
-# @mv.lls Instagram AI DM Bot
+# Instagram AI DM Bot
 
-Bot account: `@mv.lls` (your main Instagram)
 Pipeline: Meta glasses → Instagram DM → laptop (ollama) → DM reply → phone notification → Meta TTS
 
 ## What this is NOT
@@ -11,7 +10,7 @@ Instagram's terms of service prohibit automated activity. This project is for ed
 
 ## What it does
 
-When someone on the whitelist DMs `@mv.lls`:
+When someone on the whitelist DMs the bot:
 
 - **Text message** → ollama `phi3:mini` replies in one short sentence
 - **Image** → image is downloaded, ollama `llava` analyses it, reply is sent
@@ -26,7 +25,7 @@ The reply is capped at 140 characters for the first line so Meta TTS reads it al
 | File | Purpose |
 |---|---|
 | `bot.py` | Main polling loop. Checks DMs every 60s, generates replies via ollama. |
-| `login.py` | One-shot login. Creates `session.json` for `@mv.lls`. |
+| `login.py` | One-shot login. Creates `session.json` for the bot account. |
 | `get_id.py` | Resolves Instagram handles to numeric user IDs for the whitelist. |
 | `env_loader.py` | Zero-dependency `.env` reader. Respects existing env vars for systemd override. |
 | `instagrambot.service` | systemd unit file. `Restart=no` by design. |
@@ -37,13 +36,8 @@ The reply is capped at 140 characters for the first line so Meta TTS reads it al
 
 ## Whitelist
 
-Currently allowed to trigger the bot:
-
-- `57759830475`  # @mv.lls
-- `10878327026`  # @quid.x
-- `39917953709`  # @thatgirl._mairin
-- `78185684634`  # @nadz_hbk
-- `1455678182`   # @scriptless_
+The bot only replies to numeric user IDs in `ALLOWED_SENDERS` in `bot.py`.
+Use `get_id.py` to resolve handles to IDs. Empty set = no one can trigger it.
 
 To change the whitelist, edit the `ALLOWED_SENDERS` set in `bot.py` and restart.
 
@@ -52,7 +46,7 @@ To change the whitelist, edit the `ALLOWED_SENDERS` set in `bot.py` and restart.
 - Python 3.10+
 - [ollama](https://ollama.com) running locally with `phi3:mini` and `llava` models
 - `instagrapi` library (`pip install instagrapi`)
-- An Instagram account (the bot logs in as `@mv.lls`)
+- An Instagram account for the bot to log into
 
 ## Quick Start
 
@@ -105,7 +99,7 @@ sudo systemctl stop instagrambot
 
 ## The Thursday sequence
 
-1. **Tuesday night** — Phone-warm `@mv.lls`: send 3-4 DMs, like a post, post a story. Run `python login.py` to create `session.json`.
+1. **Tuesday night** — Phone-warm the bot account: send 3-4 DMs, like a post, post a story. Run `python login.py` to create `session.json`.
 2. **Wednesday** — Phone-warm 2-3 more times (~15 min total). Do not touch the laptop. Let the session age.
 3. **Thursday morning** — Start the bot. Test from a whitelisted account. Expect reply in under 90s.
 
@@ -131,7 +125,7 @@ Do NOT immediately retry. Every failed attempt deepens the flag.
 
 - `.env` is mode 600. Never commit, paste, or share.
 - `session.json` is a permanent login cookie. Treat it like a password.
-- Rotate the `@mv.lls` password periodically and re-run `login.py`.
+- Rotate the bot account password periodically and re-run `login.py`.
 - Do not edit `seen.json` by hand — a typo can cause the bot to re-reply (and look bot-shaped to Instagram).
 
 ## Architecture

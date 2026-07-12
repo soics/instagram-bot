@@ -13,9 +13,13 @@ import env_loader  # noqa: F401  - loads ~/instagrambot/.env into os.environ
 
 # CONFIG
 # Username/password come from ~/instagrambot/.env (loaded by env_loader).
-# Default below is mv.lls, but the .env value wins.
-USERNAME       = os.getenv("IG_USERNAME", "mv.lls")
-PASSWORD       = os.getenv("IG_PASSWORD", "")
+# IG_USERNAME and IG_PASSWORD are required — no defaults.
+USERNAME       = os.getenv("IG_USERNAME")
+PASSWORD       = os.getenv("IG_PASSWORD")
+
+if not USERNAME or not PASSWORD:
+    print("FATAL: IG_USERNAME and IG_PASSWORD must be set in ~/instagrambot/.env")
+    raise SystemExit(1)
 CHECK_INTERVAL = 30                      # 30s - faster replies, still gentle on Instagram
 TTS_MAX_CHARS  = 140                     # Meta reads ~140 chars from the notification preview
 IMAGE_DIR      = os.path.expanduser("~/instagrambot/img_cache")
@@ -25,15 +29,7 @@ os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # Whitelist of numeric Instagram user_ids the bot will reply to.
 # Use get_id.py to resolve handles -> ids. Empty set = reply to no one (safe).
-ALLOWED_SENDERS = {
-    "57759830475",   # @mv.lls              (your main, used for the Thursday test)
-    "10878327026",   # @quid.x
-    "39917953709",   # @thatgirl._mairin
-    "78185684634",   # @nadz_hbk
-    "1455678182",    # @scriptless_
-    # TODO: re-run get_id.py to resolve @ririi.wayzx._ after the rate limit clears
-    # "00000000000000000",   # @ririi.wayzx._
-}
+ALLOWED_SENDERS = {}
 # END CONFIG
 
 

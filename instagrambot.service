@@ -1,5 +1,5 @@
 [Unit]
-Description=@mv.lls Instagram AI DM bot (ollama-backed)
+Description=Instagram AI DM bot (ollama-backed)
 After=network-online.target
 Wants=network-online.target
 

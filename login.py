@@ -6,12 +6,11 @@ import sys
 import env_loader  # noqa: F401  - loads ~/instagrambot/.env into os.environ
 
 # Username/password come from ~/instagrambot/.env (loaded by env_loader).
-USERNAME = os.getenv("IG_USERNAME", "mv.lls")
-PASSWORD = os.getenv("IG_PASSWORD", "")
+USERNAME = os.getenv("IG_USERNAME")
+PASSWORD = os.getenv("IG_PASSWORD")
 
-if not PASSWORD:
-    print("ERROR: IG_PASSWORD env var is not set.")
-    print("Run it like:  IG_PASSWORD='yourpassword' python login.py")
+if not USERNAME or not PASSWORD:
+    print("ERROR: IG_USERNAME and IG_PASSWORD must be set in ~/instagrambot/.env")
     sys.exit(1)
 
 def challenge_code_handler(username, choice):
