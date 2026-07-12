@@ -1,146 +1,126 @@
 # Instagram AI DM Bot
 
-Pipeline: Meta glasses → Instagram DM → laptop (ollama) → DM reply → phone notification → Meta TTS
+Automated DM assistant that replies to whitelisted Instagram contacts using local AI (Ollama).
 
-## What this is NOT
+Pipeline: **Instagram DM → instagrapi → Ollama (phi3:mini / llava) → DM reply → phone notification**
 
-This is **not** a hosted 24/7 customer-service chatbot. It is a controlled local automation tool that runs on a single laptop, responds only to a whitelist of 5 approved contacts, and uses a local Ollama instance (not a cloud API). When the terminal or systemd service is stopped, no automation runs. It is not a production service — it is a personal tool.
+## How It Works
 
-Instagram's terms of service prohibit automated activity. This project is for educational and personal experimentation purposes. Use at your own risk.
+When someone on your whitelist sends a DM:
 
-## What it does
+- **Text** → ollama `phi3:mini` replies in 1 short sentence
+- **Image** → ollama `llava` analyzes the image and replies
+- **Video / clip** → short ack: "I can only look at photos right now"
+- **Anyone not on the whitelist** → silently ignored
+- **Your own messages** → silently ignored
 
-When someone on the whitelist DMs the bot:
-
-- **Text message** → ollama `phi3:mini` replies in one short sentence
-- **Image** → image is downloaded, ollama `llava` analyses it, reply is sent
-- **Video / clip** → short ack ("I can only look at photos right now")
-- **Anyone NOT on the whitelist** → silently ignored
-- **Our own messages** → silently ignored
-
-The reply is capped at 140 characters for the first line so Meta TTS reads it aloud from the Instagram notification preview. Longer answers get a follow-up message.
-
-## Files
-
-| File | Purpose |
-|---|---|
-| `bot.py` | Main polling loop. Checks DMs every 60s, generates replies via ollama. |
-| `login.py` | One-shot login. Creates `session.json` for the bot account. |
-| `get_id.py` | Resolves Instagram handles to numeric user IDs for the whitelist. |
-| `env_loader.py` | Zero-dependency `.env` reader. Respects existing env vars for systemd override. |
-| `instagrambot.service` | systemd unit file. `Restart=no` by design. |
-| `.env` | Credentials. Mode 600. **Never commit.** |
-| `session.json` | Saved Instagram login session. Mode 600. **Never commit.** |
-| `seen.json` | Set of message IDs already processed. Runtime state. Cleared on reset. |
-| `img_cache/` | Per-message downloaded images. Cleared on reset. |
-
-## Whitelist
-
-The bot only replies to numeric user IDs in `ALLOWED_SENDERS` in `bot.py`.
-Use `get_id.py` to resolve handles to IDs. Empty set = no one can trigger it.
-
-To change the whitelist, edit the `ALLOWED_SENDERS` set in `bot.py` and restart.
+First reply is capped at 140 chars so Meta TTS reads it from the notification preview. Longer answers get a follow-up message.
 
 ## Requirements
 
-- Python 3.10+
-- [ollama](https://ollama.com) running locally with `phi3:mini` and `llava` models
-- `instagrapi` library (`pip install instagrapi`)
-- An Instagram account for the bot to log into
+- **Python 3.10+**
+- **Ollama** running locally with `phi3:mini` and `llava` models
+  ```bash
+  ollama pull phi3:mini
+  ollama pull llava
+  ```
+- **Instagram account** for the bot to log into
+- **A phone** with Instagram installed (for login challenges)
 
-## Quick Start
+## Setup
+
+### 1. Clone & Install
 
 ```bash
-# 1. Clone and install
 git clone <repo-url>
 cd instagrambot
 pip install instagrapi
+```
 
-# 2. Set up credentials
-cp .env.example .env   # then fill in IG_USERNAME and IG_PASSWORD
+### 2. Configure Credentials
 
-# 3. Login once (do this from your phone with Instagram open)
+```bash
+cp .env.example .env
+# Edit .env with your bot account's Instagram username and password
+```
+
+### 3. Build the Whitelist
+
+Decide who the bot will reply to. You have two options:
+
+**Option A: Start empty (no one can trigger it)**
+Leave `ALLOWED_SENDERS = {}` in `bot.py`. Safe default.
+
+**Option B: Add specific users**
+Run the ID resolver to get numeric user IDs:
+
+```bash
+python get_id.py username1 username2 username3
+```
+
+Then copy the printed IDs into `bot.py`'s `ALLOWED_SENDERS` set.
+
+### 4. Login
+
+```bash
 python login.py
+```
 
-# 4. Run
+Do this from your phone with Instagram open. If a challenge code is sent, enter it in the terminal.
+
+### 5. Run
+
+```bash
 python bot.py
 ```
 
-## Running manually
+## Running 24/7 (systemd)
 
 ```bash
-cd ~/instagrambot
-source ~/botenv/bin/activate
-python bot.py
-```
-
-Stop with `Ctrl+C`. Useful for testing or when you only need the bot for a short window.
-
-## Running with systemd (24/7)
-
-```bash
-sudo cp ~/instagrambot/instagrambot.service /etc/systemd/system/
+sudo cp instagrambot.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable instagrambot
 sudo systemctl start instagrambot
 ```
 
-Watch logs:
+View logs:
 
 ```bash
 journalctl -u instagrambot -f
 ```
 
-Stop:
+## Instagram Challenges
 
-```bash
-sudo systemctl stop instagrambot
-```
+The bot **stops immediately** on a challenge, never retries in a loop (retries = flagged faster).
 
-## The Thursday sequence
+1. Stop the bot
+2. Open Instagram on your phone, complete the challenge
+3. Wait 15-30 minutes
+4. Re-run `python login.py`
+5. Restart
 
-1. **Tuesday night** — Phone-warm the bot account: send 3-4 DMs, like a post, post a story. Run `python login.py` to create `session.json`.
-2. **Wednesday** — Phone-warm 2-3 more times (~15 min total). Do not touch the laptop. Let the session age.
-3. **Thursday morning** — Start the bot. Test from a whitelisted account. Expect reply in under 90s.
+## Files
 
-## If Instagram challenges the session
-
-The bot is built to **STOP** on a challenge, not loop. You'll see:
-
-```
-[AUTH] Instagram wants verification: <details>
-Stopping. Solve the challenge on your phone, then restart me manually.
-```
-
-Steps:
-1. Stop the bot.
-2. Open Instagram on your phone, complete the challenge.
-3. Wait 15-30 minutes.
-4. Re-run `python login.py` to refresh the session.
-5. Restart the bot.
-
-Do NOT immediately retry. Every failed attempt deepens the flag.
+| File | Purpose |
+|------|---------|
+| `bot.py` | Main polling loop. Checks DMs every 30s, generates AI replies. |
+| `login.py` | One-shot login. Creates `session.json`. |
+| `get_id.py` | Resolves Instagram @handles → numeric user IDs for the whitelist. |
+| `env_loader.py` | Reads `.env` into environment. Zero dependencies. |
+| `instagrambot.service` | systemd unit (Restart=no by design). |
 
 ## Security
 
-- `.env` is mode 600. Never commit, paste, or share.
-- `session.json` is a permanent login cookie. Treat it like a password.
-- Rotate the bot account password periodically and re-run `login.py`.
-- Do not edit `seen.json` by hand — a typo can cause the bot to re-reply (and look bot-shaped to Instagram).
+- `.env` and `session.json` are gitignored. **Never commit them.**
+- Permissions are set to 600 (owner read/write only).
+- The bot never uses your real Instagram — only the bot account you configure.
+- Whitelist prevents random people from triggering the bot.
+- All AI runs locally on your machine — no data sent to cloud APIs.
+- If a session is challenged, the bot stops immediately.
 
-## Architecture
+## Limitations
 
-```
-Instagram DM ──→ instagrapi ──→ bot.py
-                                    │
-                            ┌───────┴───────┐
-                            │               │
-                       text message      image message
-                            │               │
-                            ▼               ▼
-                      phi3:mini (ollama)  llava (ollama)
-                            │               │
-                            └───────┬───────┘
-                                    ▼
-                              DM reply
-```
+- Meta's terms prohibit automation. This is for **educational / personal experimentation**.
+- Session rotation is required every 1-2 weeks (Instagram expires them).
+- Works best when the bot account is "phone-warmed" before use (send a few DMs, like a post, post a story the day before).
+- Only handles text and single-image DMs. Video, reels, and stories get a generic response.
